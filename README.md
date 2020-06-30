@@ -1,3 +1,3 @@
 # 预览地址
 
-[https://huanent.github.io/vue-quickstart/](https://huanent.github.io/vue-quickstart/)
+[http://47.110.125.56/plain-admin](http://47.110.125.56/plain-admin)
