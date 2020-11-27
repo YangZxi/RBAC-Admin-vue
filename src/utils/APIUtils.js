@@ -1,7 +1,7 @@
 /**
  * API文件
  */
-const SERVER_BASE = "http://127.0.0.1:8999";   // 服务器地址
+const SERVER_BASE = window.localStorage.getItem("API_PATH") || "http://127.0.0.1:8999";   // 服务器地址
 // const SERVER_BASE = "http://47.110.125.56:8999";   // 服务器地址
 const SERVER_UPLOAD = SERVER_BASE + "/upload";   // 服务器地址
 const BASE_API = SERVER_BASE + '/api';   // 服务器地址
@@ -39,8 +39,9 @@ const apis = {
 
   // 配置信息API
   PROP_API: "/prop",
-
-  MAIL_SEND: "/mail",
+  
+  MAIL_API: "/mail",
+  MAIL_SEND: "/mail/send",
   
   TOKEN_QINIU: "/token/qiniu",
   FILE_UPLOAD: "/upload",
@@ -52,7 +53,6 @@ const apisBuild = function() {
     // console.log(regx.test(apis[key]), key)
     apis[key] = regx.test(apis[key]) ? apis[key] : BASE_API + apis[key];
   })
-  console.log(apis)
   return apis;
 }
 

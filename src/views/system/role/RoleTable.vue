@@ -81,7 +81,8 @@
 						node-key="id" 
 						:check-strictly="true"
 						:default-expanded-keys="[1]" 
-						:props="authority.defaultProps">
+						:props="authority.defaultProps"
+            @check="nodeCheck">
 					</el-tree>
 					<el-checkbox :indeterminate="authority.isIndeterminate" 
 						v-model="authority.checkAll" @change="authorityHandler().handleCheckAllChange()">
@@ -316,9 +317,33 @@ export default {
       return {
         handleCheckAllChange: function() {
           let arr = vm.authority.checkAll ? vm.authority.tree.map(el => el.id) : [];
-          vm.$refs.authorityTree.setCheckedKeys(arr)
+          console.log(vm.authority.tree)
+          vm.$refs.authorityTree.setCheckedKeys(arr);
+        },
+        nodeClick: function (node, status) {
+          console.log(node, status)
+          console.log(vm.$refs.authorityTree.getCheckedKeys())
         }
       }
+    },
+    nodeCheck(node, checkList) {
+      let checkNode = (node, check) => {
+        if (node.children == null || node.children.length == 0) return;
+        node.children.forEach(el => {
+          this.$refs.authorityTree.setChecked(el.id, check);
+          return checkNode(el, check);
+        })
+      }
+      // 判断是选中还是取消选中
+      let isCheck = false;
+      for (let i of checkList.checkedKeys) {
+        if (i == node.id) {
+          isCheck = true;
+          break;
+        }
+      }
+      
+      checkNode(node, isCheck);
     },
     /**
      * 获取当前点击角色拥有的菜单

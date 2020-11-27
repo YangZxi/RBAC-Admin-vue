@@ -3,12 +3,12 @@
     <el-card>
       <el-form :inline="true" :model="searchFrom">
         <el-row type="flex" justify="start" :gutter="0">
-          <el-form-item label="" size="mini"><el-input v-model="searchFrom.name" placeholder="请输入菜单名称进行查询"></el-input></el-form-item>
+          <el-form-item label="" size="mini"><el-input v-model="searchFrom.username" placeholder="请输入菜单名称进行查询"></el-input></el-form-item>
           <el-form-item label="" size="mini">
             <div class="block">
               <span class="demonstration"></span>
               <el-date-picker
-                v-model="searchFrom.dateScope"
+                v-model="dateScope"
                 type="daterange"
                 align="right"
                 unlink-panels
@@ -16,13 +16,14 @@
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
                 :picker-options="pickerOptions"
+                value-format="yyyy-MM-dd"
                 style="width: 280px;"
               ></el-date-picker>
             </div>
           </el-form-item>
           <el-form-item size="mini">
             <el-select v-model="searchFrom.status" placeholder="菜单状态状态" style="width: 150px;">
-              <el-option label="全部" :value="0"></el-option>
+              <el-option label="全部" :value="-1"></el-option>
               <el-option v-for="item in statusOpt" :key="item.value" :label="item.label" :value="item.value"></el-option>
             </el-select>
           </el-form-item>
@@ -31,13 +32,13 @@
             <el-button type="success" icon="el-icon-search" @click="searchHandler">搜索</el-button>
           </el-form-item>
           <el-form-item size="mini">
-            <el-button type="warning" icon="el-icon-refresh-left" native-type="reset">重置</el-button>
+            <el-button type="warning" icon="el-icon-refresh-left" @click="resetForm">重置</el-button>
           </el-form-item>
         </el-row>
       </el-form>
       <el-row>
         <!-- 使用组件的形式 -->
-        <data-table :API="API" >
+        <data-table :API="API" ref="dataTable">
           
         </data-table>
       </el-row>
@@ -52,9 +53,11 @@ export default {
   data() {
     return {
       // 搜索表单
+      dateScope: null,
       searchFrom: {
-        name: '',
-        dateScope: null,
+        username: '',
+        startTime: null,
+        endTime: null,
         status: null,
       },
       API: this.$api.USER_API,
@@ -106,12 +109,31 @@ export default {
   },
   methods: {
     searchHandler() {
-      
+      // console.log(this.searchFrom)
+      if (this.dateScope != null) {
+        this.searchFrom.startTime = this.dateScope[0];
+        this.searchFrom.endTime = this.dateScope[1];
+      }
+      // return
+      console.log(this.searchFrom)
+      // return
+      this.$axios.get(this.API, this.searchFrom, true).then(res => {
+        if (res.code == 200) {
+          console.log(res.data);
+
+          console.log(this.$refs.dataTable.pageData = res.data)
+        }
+      }).catch(err => {
+
+      });
     },
     /**
      * 清空表单
      */
-    
+    resetForm() {
+      this.searchFrom = {};
+      this.dateScope = null;
+    }
   },
   mounted() {
     // console.log(this.API)

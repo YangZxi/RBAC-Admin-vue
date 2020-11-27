@@ -124,7 +124,7 @@ export default {
           // console.log(this.infoData.disks);
           
           // 构建CPU统计图
-          this.cpuChartData.push({ name: new Date().getSeconds(), value: res.data.usedCpu });
+          this.cpuChartData.push({ name: new Date().toTimeString().substr(0, 8), value: res.data.usedCpu });
           this.cpuChart.setOption({
             xAxis: {
               type: 'category',
@@ -142,7 +142,7 @@ export default {
           });
 
           this.memoryChartData.push({ 
-            name: new Date().getSeconds(), 
+            name: new Date().toTimeString().substr(0, 8), 
             value: (res.data.usedMemory * 1024) 
           });
           this.memoryChart.setOption({
@@ -170,10 +170,16 @@ export default {
     this.cpuChart = this.$chart.cpuChart("cpuChart");
     this.memoryChart = this.$chart.cpuChart("memoryChart");
     this.querySystemData();
+  },
+  activated() {
     this.timer = setInterval(() => {
       // console.log(this.$chart.systemInfoChart())
       this.querySystemData();
     }, 500 * 10)
+  },
+  deactivated() {
+    console.log(11)
+    clearInterval(this.timer);
   },
   beforeDestroy() {
     clearInterval(this.timer);

@@ -6,9 +6,6 @@
         <i class="el-icon-odometer" style="margin-right: 5px;"></i>
         首页
       </span>
-      <!-- <transition mode="out-in"> -->
-        <!-- <admin-home></admin-home> -->
-      <!-- </transition> -->
     </el-tab-pane>
     <el-tab-pane v-for="item in tabs" :label="item.label" :key="item.index" :name="item.index"  :closable="item.closable">
       <span slot="label">
