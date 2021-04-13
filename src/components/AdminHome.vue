@@ -1,4 +1,5 @@
 <template>
+  <!-- 所有组件和页面的根 -->
   <el-container>
     <!-- <i  v-loading.fullscreen.lock="this.$store.state.user == null"></i> -->
     <el-container id='root-container' >
@@ -24,7 +25,7 @@
 </template>
 
 <script>
-import LeftNav from "./common/LeftNav.vue";
+import LeftNav from "./common/LeftNav";
 import RightTabs from "./common/RightTabs";
 import TopBar from "./common/TopBar";
 import { mapActions } from "vuex";
@@ -46,7 +47,7 @@ export default {
      * 这里主动添加Tab标签
      */
     addTab() {
-      console.log(this.$router.currentRoute);
+      // console.log(this.$router.currentRoute);
       this.clickMenuItem(this.$router.currentRoute.name);
     }
   },
@@ -60,10 +61,8 @@ export default {
     // 页面首次加载，获取用户信息（其中包含了菜单数据）
     // 注意！！！这是同步的请求
     await this.getMenu();
-    this.addTab();
+    // this.addTab();
     loading.close();
-    // console.log(111111111)
-    // this.openFullScreen();
   },
   components: {
     LeftNav,

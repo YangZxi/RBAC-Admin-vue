@@ -133,7 +133,8 @@ export default {
   },
   props: {
     API: String,
-    logType: String
+    logType: String,
+    searchForm: Object,
   },
   data() {
     return {
@@ -203,10 +204,13 @@ export default {
         });
     },
     // 刷新和获取表格数据
-    queryHandler(isShow = true) {
+    queryHandler(current, isShow = true) {
+      if (current) {
+        this.pageInfo.current = current;
+      }
       this.table.loading = true;
       this.$axios
-        .get(this.API, this.pageInfo, isShow)
+        .get(this.API, Object.assign({}, this.pageInfo, this.searchForm), isShow)
         .then(res => {
           // console.log(res)
           this.pageData = res.data ? res.data : { current: 1, total: 0, records: [] };
@@ -234,7 +238,7 @@ export default {
           ids = [rows.id];
         }
         this.$axios.delete(this.API, ids).then(res => {
-          this.queryHandler(false);
+          this.queryHandler(null, false);
         });
       }).catch(action => {});
     },

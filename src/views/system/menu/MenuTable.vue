@@ -139,23 +139,19 @@
               <el-input-number v-model="modelForm.order" :min="1" :max="100" label="排序" style="width: 100%;"></el-input-number>
             </el-form-item>
           </el-col>
-          <el-col :span="modelForm.type == 1 ? 7 :12">
+          <el-col :span="modelForm.type == 1 ? 7 : 12">
             <el-form-item label="状态">
               <el-select v-model="modelForm.status" placeholder="默认状态为启用">
                 <el-option label="启用" :value="1"></el-option>
-                <el-option label="禁用" :value="2"></el-option>
+                <el-option label="禁用" :value="0"></el-option>
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="modelForm.type == 1 ? 16 :24">
-            <el-form-item :label="modelForm.type == 3 ? '上级菜单' : '上级目录'" prop="parentMenu">
-              <!-- <el-select v-model="modelForm.parent_menu" placeholder="请选择上级类目" style="width: 100%;">
-                <el-option label="启用" :value="1"></el-option>
-                <el-option label="禁用" :value="2"></el-option>
-              </el-select> -->
+          <el-col :span="modelForm.type == 1 ? 16 : 24">
+            <el-form-item :label="modelForm.type == 3 ? '上级菜单' : '上级目录'" prop="parentMenuId">
               <el-cascader 
                 style="width: 100%;"
-                v-model="modelForm.parentMenu"
+                v-model="modelForm.parentMenuId"
                 :options="form.menuTree"
                 :props="{ checkStrictly: true, value: 'id', label: 'name', lazy: false, emitPath: false }">
                 <template slot-scope="{ node, data }">
@@ -179,6 +175,10 @@
 <script>
 export default {
   name: 'MenuTable',
+  props: {
+    searchForm: Object,
+    API: String
+  },
   data() {
     var checkPath = (rule, value, callback) => {
       if (this.modelForm.type != 3 && !value) {
@@ -200,6 +200,7 @@ export default {
     };
     return {
       // 删除、修改、到处按钮是否禁用
+      ROOT_ID: 1,
       isOperater: 0,
       table: {
         loading: true,
@@ -214,12 +215,13 @@ export default {
         current: 1,
         size: 10,
         total: 0,
-        parentMenu: 0
+        status: null,
+        parentMenuId: 1
       },
       modelForm: {
         name: "",
         type: 1,
-        parent_menu: null,
+        parentMenuId: null,
         icon: null,
         order: 9,
         path: null,
@@ -230,7 +232,7 @@ export default {
       form: {
         lable: ["", "目录", "菜单", "按钮"],
         type: 1,
-        menuTree: [{ id: "0", name: "根目录" }],
+        menuTree: [{ id: 1, name: "根目录" }],
         formRules: {
           name: [
             { required: true, message: "名称不可以为空", trigger: "blur" },
@@ -247,7 +249,7 @@ export default {
             { required: true, validator: checkPermission, trigger: "blur" },
             { min: 5, max: 20, message: "长度在5-20个字符之间"},
           ],
-          parentMenu: [{ required: true, message: "请选择上级菜单或目录", trigger: "blur" }],
+          parentMenuId: [{ required: true, message: "请选择上级菜单或目录", trigger: "blur" }],
         },
       },
       pageData: {current: 1, total: 0, records: []},
@@ -281,15 +283,16 @@ export default {
         }).catch(action => {
           value.status = 1;
         });
+      } else {
+        this.$http.changeStatus(this.API, {id: value.id, status: 1}, false);
       }
     },
     // 表格树形懒加载
     tableLoad(tree, treeNode, resolve) {
       // console.log(tree, treeNode, resolve)
-      let data = { current: 1, size: 100, parentMenu: tree.id};
+      let data = { current: 1, size: 100, parentMenuId: tree.id};
       this.$axios.get(this.API, data).then(res => {
         if (res.code == 200) {
-          console.log(res.data)
           resolve(res.data.records);
         }
       })
@@ -302,7 +305,6 @@ export default {
     },
     // 表格行被选择事件
     rowSelect(selection, row) {
-      console.log(selection, row);
       // this.table.row = row;
     },
     //
@@ -313,16 +315,13 @@ export default {
      * @param {Object} data
      */
     baseRequest(data) {
-      console.log(this.API)
       return this.method(this.API, data).then(res => {
-        console.log(res)
         if (res.code == 200) {
-          // this.modelForm = {type: 1, order: 3, status: 1}
           this.dialog.visible = false;
+          this.queryHandler();
         }
         return res;
       }).catch(err => {
-        console.log(err, "1111")
         Promise.reject(err);
       });
     },
@@ -330,38 +329,26 @@ export default {
     queryHandler() {
       this.table.loading = true;
       this.$axios.get(this.API, this.pageInfo).then(res => {
-        // console.log(res)
         this.pageData = res.data ? res.data : {current: 1, total: 0, records: []};
         this.table.loading = false;
-        // console.log(res.data)
       }).catch(err => {
         this.table.loading = false;
         // console.log(err)
       })
     },
-    clearForm(obj) {
-      Object.keys(obj).forEach(key => {
-        obj[key] = null;
-      });
-      // if (this.$refs.modelForm != undefined) {
-      //   console.log("chongzhi")
-      //   this.$refs["modelForm"].resetFields();
-      // }
-    },
     // 新增按钮
     addHandler() {
-      // this.clearForm(this.modelForm);
       this.modelForm = {type: 1, order: 3, status: 1}
       this.dialog.title = "新增";
       this.dialog.submitText = "新增";
       this.dialog.visible = true;
       this.method = this.$axios.put;
     },
-    // 修改按钮
+    // 编辑按钮
     modifyHandler(row = this.table.rows.slice(-1)[0]) {
-      // this.clearForm(this.modelForm);
       // 判断是否是从表格里的编辑按钮触发的
-      row.parentMenu = row.parentMenu == 0 ? "0" : row.parentMenu;
+      row.parentMenuId = row.parentMenuId;
+      if (row.status === false) row.status = 0;
       this.modelForm = row;
       this.dialog.title = "修改";
       this.dialog.submitText = "更新";
@@ -376,8 +363,6 @@ export default {
         cancelButtonText: '取消'
       }).then(() => {
         this.method = this.$axios.delete;
-        console.log("删除了")
-        console.log(rows)
         if (Array.isArray(rows)) {
           this.baseRequest(rows.map(el => el.id));
         } else {
@@ -414,7 +399,6 @@ export default {
     // 这下面是关于表单的方法
     // 
     typeChange(val) {
-      console.log(val)
       // this.type = val;
     },
     /**
@@ -422,16 +406,11 @@ export default {
      */
     queryMenuTree() {
       this.$axios.get(this.$api.MENU_API, {showType: "tree"}, false).then(res => {
-        console.log(this.form.menuTree);
         this.form.menuTree = this.form.menuTree.concat(res.data);
       });
     },
   },
   mounted() {
-    // this.table.forEach(el => {
-      // this.modelForm[el.prop] = null
-    // });
-    console.log(this.API)
     this.queryHandler();
     this.queryMenuTree();
   },
@@ -439,12 +418,6 @@ export default {
     pageInfo() {
       console.log("我变了")
     }
-  },
-  props: {
-    // pageData: Object,
-    // table: Object,
-    // modelForm: Object,
-    API: String
   },
 };
 </script>

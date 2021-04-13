@@ -27,6 +27,7 @@
           <el-table :data="pageData.records" style="width: 100%" 
               @selection-change="selectionChange"
               @row-click="rowlClick"
+              highlight-current-row
               @select="rowSelect"
               row-key="id"
               ref="table"
@@ -80,9 +81,9 @@
 						:show-checkbox="true" 
 						node-key="id" 
 						:check-strictly="true"
-						:default-expanded-keys="[1]" 
+						:default-expanded-keys="[2]" 
 						:props="authority.defaultProps"
-            @check="nodeCheck">
+            @check="nodeCheckTrue">
 					</el-tree>
 					<el-checkbox :indeterminate="authority.isIndeterminate" 
 						v-model="authority.checkAll" @change="authorityHandler().handleCheckAllChange()">
@@ -165,6 +166,12 @@
 <script>
 export default {
   name: "RoleTable",
+  props: {
+    // pageData: Object,
+    // table: Object,
+    searchForm: Object,
+    API: String
+  },
   data() {
     var checkPath = (rule, value, callback) => {
       if (this.modelForm.type != 3 && !value) {
@@ -194,7 +201,11 @@ export default {
       },
       // 树形权限数据
       authority: {
-        role: {},
+        // 角色的实体信息 与数据库字段对应
+        role: {
+          id: null
+        },
+        // 当前登录用户拥有的权限树
         tree: [],
         selected: [],
         defaultProps: {
@@ -202,7 +213,7 @@ export default {
           label: 'name'
         },
         checkAll: false,
-        isIndeterminate: false
+        isIndeterminate: true
       },
       dialog: {
         visible: false,
@@ -213,7 +224,7 @@ export default {
         current: 1,
         size: 10,
         total: 0,
-        parentMenu: 0
+        parentMenuId: 0
       },
       modelForm: {
         id: null,
@@ -226,20 +237,17 @@ export default {
         roles: [],
         originalModel: {},
         formRules: {
-          username: [
-            { required: true, message: "用户名不可以为空", trigger: "blur" },
-            { min: 5, max: 20, message: "长度在5-20个字符之间", trigger: "blur" }
+          nameZh: [
+            { required: true, message: "角色名称不可以为空", trigger: "blur" },
+            { min: 2, max: 10, message: "长度在2-10个字符之间", trigger: "blur" }
           ],
-          nickname: [
-            // { validator: checkNickname, trigger: "blur" },
-            { max: 10, message: "昵称最长为10个字符", trigger: "blur" },
+          name: [
+            { required: true, message: "角色英文名称不可以为空", trigger: "blur" },
+            { min: 3, max: 10, message: "长度在3-10个字符", trigger: "blur" },
           ],
-          email: [
-            // { required: true, validator: checkEmail, trigger: "blur" },
-            { required: true, type: "email", message: "长度在2-20个字符之间", trigger: "blur"},
-            { min: 6, max: 30, message: "长度在6-30个字符之间"},
+          desc: [
+            { max: 50, message: "最大长度50个字符"},
           ],
-          // parentMenu: [{ required: true, message: "请选择上级菜单或目录", trigger: "blur" }],
         },
       },
       pageData: {current: 1, total: 0, records: []},
@@ -302,7 +310,6 @@ export default {
     },
     // 当某一行被点击时
     rowlClick(row) {
-      console.log(row)
       // 获取角色菜单数据
       this.getRoleMenu(row);
     },
@@ -310,24 +317,30 @@ export default {
     // 以下和右边的权限管理有关
     // 
     authorityHandler() {
-      function toggleSelect() {
-        this.$refs.authorityTree.setCheckedKeys([3]);
-      }
       let vm = this;
       return {
         handleCheckAllChange: function() {
           let arr = vm.authority.checkAll ? vm.authority.tree.map(el => el.id) : [];
-          console.log(vm.authority.tree)
           vm.$refs.authorityTree.setCheckedKeys(arr);
         },
-        nodeClick: function (node, status) {
-          console.log(node, status)
-          console.log(vm.$refs.authorityTree.getCheckedKeys())
-        }
       }
     },
+    /**
+     * 权限被选择
+     * @param {Object} node 所有节点
+     * @param {Array} checkList 选中列表,值是id
+     */
     nodeCheck(node, checkList) {
+    },
+    /**
+     * 权限被选择 这是在启用严格模式的情况下使用的方法
+     * @param {Object} node 所有节点
+     * @param {Array} checkList 选中列表,值是id
+     */
+    nodeCheckTrue(node, checkList) {
+      // 选中菜单的递归
       let checkNode = (node, check) => {
+        // 选中当前菜单的子菜单
         if (node.children == null || node.children.length == 0) return;
         node.children.forEach(el => {
           this.$refs.authorityTree.setChecked(el.id, check);
@@ -336,10 +349,13 @@ export default {
       }
       // 判断是选中还是取消选中
       let isCheck = false;
-      for (let i of checkList.checkedKeys) {
-        if (i == node.id) {
-          isCheck = true;
-          break;
+      if (checkList.checkedKeys.includes(node.id)) {
+        isCheck = true;
+        // 选中父级菜单
+        let parentMenu = node;
+        while (parentMenu.parentMenuId) {
+          this.$refs.authorityTree.setChecked(parentMenu.id, isCheck);
+          parentMenu = this.$store.state.menuModule.menusOriginal[parentMenu.parentMenuId]
         }
       }
       
@@ -350,25 +366,26 @@ export default {
      * @param {Object} row
      */
     getRoleMenu(row) {
-      // alert("获取当前角色的菜单");
       this.authority.role = row;
-      // console.log(this.authority.role)
       this.$axios.get(this.$api.ROLE_MENU_API, {roleId: row.id}, false).then(res => {
         // 设置对应的权限
-        this.$refs.authorityTree.setCheckedKeys(res.data);
-        this.authority.selected = res.data;
+        this.$refs.authorityTree.setCheckedKeys(res.data); // element-ui
+        this.authority.selected = res.data; // ant-ui
       });
     },
     /**
      * 保存角色的菜单树
      */
     addRoleMenus() {
+      if (!this.authority.role || !this.authority.role.id) {
+        this.$message.warning("请先选择你需要赋权的角色");
+        return;
+      }
       this.method = this.$axios.post;
       let ids = this.$refs.authorityTree.getCheckedNodes(false, true).map(el => el.id);
       this.baseRequest({
         id: this.authority.role.id,
         menuIds: this.$refs.authorityTree.getCheckedKeys()
-        // menuIds: ids,
       });
     },
     //
@@ -381,7 +398,6 @@ export default {
      async baseRequest(data, isShow = true) {
       console.log(this.API)
       return await this.method(this.API, data, isShow).then(res => {
-        console.log(res)
         if (res.code == 200) {
           
         }
@@ -391,26 +407,28 @@ export default {
         Promise.reject(err);
       });
     },
-    // 刷新和获取表格数据
-    queryHandler(refresh) {
-      if (refresh) {
+    /**
+     * 刷新和获取表格数据
+     * @param {Integer} current 当前页
+     */
+    queryHandler(current) {
+      if (current) {
+        // 清空右侧权限树的选中
         this.authority.role = {};
-        this.authority.tree = this.$store.state.menuModule.menu;
+        // this.authority.tree = this.$store.state.menuModule.menu;
+        this.pageInfo.current = current;
       }
       this.table.loading = true;
-      this.$axios.get(this.API, this.pageInfo).then(res => {
-        // console.log(res)
+      this.$log.info(this.searchForm);
+      this.$axios.get(this.API, Object.assign({}, this.pageInfo, this.searchForm)).then(res => {
         this.pageData = res.data ? res.data : {current: 1, total: 0, records: []};
         this.table.loading = false;
-        // console.log(res.data)
       }).catch(err => {
         this.table.loading = false;
-        // console.log(err)
       })
     },
     // 新增按钮
     addHandler() {
-      // this.clearForm(this.modelForm);
       this.dialog.title = "新增";
       this.dialog.submitText = "新增";
       this.dialog.visible = true;
@@ -420,9 +438,7 @@ export default {
     modifyHandler(row = this.table.rows.slice(-1)[0]) {
       this.modelForm = row;
       this.form.originalModel = JSON.parse(JSON.stringify(row));
-      // this.$tools.copyObj()
       // 查询当前用户的角色信息（id数组）
-      
       this.dialog.title = "修改";
       this.dialog.submitText = "更新";
       this.dialog.visible = true;
@@ -446,8 +462,9 @@ export default {
       });
     },
     // 导出按钮
-    exportHandler() {
-      
+    exportHandler(rows = this.table.rows) {
+      console.log(rows);
+      console.log(rows);
     },
     /**
      * 表单提交 新增or更新
@@ -491,7 +508,6 @@ export default {
     },
     dialogClose() {
       // this.$tools.clearObj(this.modelForm, this);
-      console.log(this.form.originalModel)
       if (this.form.originalModel != null) {
         this.$tools.copyObj(this.modelForm, this.form.originalModel, this);
       }
@@ -504,20 +520,13 @@ export default {
     
   },
   mounted() {
-    this.queryHandler(true);
-    this.authority.tree = this.$store.state.menuModule.menu;
-    console.log(this.authority);
+    this.queryHandler();
+    this.authority.tree = this.$store.state.menuModule.menus;
   },
   watch: {
     pageInfo() {
       console.log("我变了")
     }
-  },
-  props: {
-    // pageData: Object,
-    // table: Object,
-    // modelForm: Object,
-    API: String
   },
 };
 </script>

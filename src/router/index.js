@@ -9,6 +9,14 @@ Router.prototype.push = function push(location) {
   return originalPush.call(this, location).catch(err => err);
 }
 
+/**
+ * value[default]: value表示属性名，default表示属性的默认值
+ * 
+ * keepAlive[false]: 为false表示每次进入当前tab页面都会重新渲染，具体请参考 https://cn.vuejs.org/v2/api/#keep-alive
+ * anonymous[false]: 匿名请求，设置为true表示这个组件或路径只需要登录即可访问，无需其他权限
+ * tabName['']: 标签名，这个将显示在tab标签页上
+ */
+
 const router = new Router({
   routes: [
     {
@@ -16,21 +24,29 @@ const router = new Router({
       name: "Login",
       component: () => import("@/views/Login")
     }, {
-      path: "",
-      name: "AdminHome",
+      path: "/",
+      // name: "AdminHome",
       component: () => import("@/components/AdminHome"),
       children: [
         {
-          path: "/",
+          path: "",
           name: "Home",
           component: () => import("@/views/Home"),
-          meta: { keepAlive: false }
-        }, {
+          meta: { keepAlive: true, anonymous: true }
+        }, 
+        
+        // 个人中心
+        {
           path: "/mine",
           name: "Mine",
-          component: () => import("@/views/Mine"),
-          meta: { keepAlive: false }
-        },
+          component: () => import("@/views/mine/Mine"),
+          meta: { keepAlive: false, anonymous: true, tabName: '我的信息' }
+        }, {
+          path: "/mine/password",
+          name: "Password",
+          component: () => import("@/views/mine/Password"),
+          meta: { keepAlive: false,  anonymous: true , tabName: '修改密码'}
+        }, 
         
         
         // 系统管理
@@ -93,11 +109,13 @@ const router = new Router({
         {
           path: "/403",
           name: "Forbidden",
-          component: () => import("@/components/Forbidden")
+          component: () => import("@/components/Forbidden"),
+          meta: { anonymous: true }
         }, {
           path: "/404",
           name: "NotFound",
-          component: () => import("@/components/NotFound")
+          component: () => import("@/components/NotFound"),
+          meta: { anonymous: true }
         }, 
       ],
     },

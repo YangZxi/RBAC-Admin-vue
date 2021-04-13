@@ -1,13 +1,10 @@
 <template>
   <el-form :inline="true" :model="searchForm">
     <el-row type="flex" justify="start" :gutter="0">
-      <el-form-item label="" size="mini"
-        ><el-input
-          v-model="searchForm.word"
-          placeholder="请输入菜单名称进行查询"
-        ></el-input
-      ></el-form-item>
       <el-form-item label="" size="mini">
+        <el-input v-model="searchForm.word" :placeholder="this.wordPlace"></el-input>
+      </el-form-item>
+      <el-form-item label="" size="mini" v-show="dateShow">
         <div class="block">
           <span class="demonstration"></span>
           <el-date-picker
@@ -24,31 +21,26 @@
           ></el-date-picker>
         </div>
       </el-form-item>
-      <el-form-item size="mini">
+      <el-form-item size="mini" v-show="statusShow">
         <el-select
           v-model="searchForm.status"
           placeholder="菜单状态状态"
-          style="width: 150px"
-        >
+          style="width: 150px" >
           <el-option label="全部" :value="null"></el-option>
           <el-option
             v-for="item in statuses"
             :key="item.value"
             :label="item.label"
-            :value="item.value"
-          ></el-option>
+            :value="item.value">
+          </el-option>
         </el-select>
       </el-form-item>
       <!-- 按钮 -->
       <el-form-item size="mini">
-        <el-button type="success" icon="el-icon-search" @click="searchHandler"
-          >搜索</el-button
-        >
+        <el-button type="success" icon="el-icon-search" @click="searchHandler">搜索</el-button>
       </el-form-item>
       <el-form-item size="mini">
-        <el-button type="warning" icon="el-icon-refresh-left" @click="resetForm"
-          >重置</el-button
-        >
+        <el-button type="warning" icon="el-icon-refresh-left" @click="resetForm">重置</el-button>
       </el-form-item>
     </el-row>
   </el-form>
@@ -96,6 +88,11 @@ export default {
   },
   props: {
     searchForm: Object,
+    // 搜索输入框占位符
+    wordPlace: {
+      type: String,
+      default: "请输入搜索关键词"
+    },
     statuses: {
       type: Array,
       default: () => {
@@ -105,6 +102,14 @@ export default {
           { value: 2, label: '已删除' }
         ];
       }
+    },
+    dateShow: {
+      type: Boolean,
+      default: true
+    },
+    statusShow: {
+      type: Boolean,
+      default: true
     }
   },
   methods: {
@@ -115,8 +120,9 @@ export default {
     },
     resetForm() {
 
-    }
+    },
   },
+
 };
 </script>
 

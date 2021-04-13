@@ -22,6 +22,9 @@
                 <el-form-item>
                   <el-button type="primary" id='loginBtn' @click="login" tabindex="3">登录</el-button>
                 </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" id='loginBtn' @click="login($api.OAUTH_QQ)" tabindex="3">QQ登录</el-button>
+                </el-form-item>
               </el-form>
             </div>
           </el-col>
@@ -52,41 +55,76 @@ export default {
       loginRules: {
         username: [{ required: true, message: "请输入账户名称" }],
         password: [{ required: true, message: "请输入密码" }]
-      }
+      },
+      event: null,
     };
   },
   methods: {
-    login() {
-      this.$refs["loginForm"].validate(valid => {
-        if (!valid) {
-          Message.error("登录信息不完整");
-          return;
+    receiveMsg(e) {
+      if (e.origin === this.$api.SERVER_BASE) {
+        let res = JSON.parse(e.data);
+        console.log(res)
+        // 如果登录成功
+        if (res.code == 200) {
+          console.log(this)
+          // 添加Token信息
+          this.$store.commit("setToken", res.token);
+          this.$router.push({
+            name: "Home",
+            params: {
+              // 表示是从登录页面过来的
+              login: true
+            }
+          });
+        } else {
+          this.$notify({
+            title: res.msg,
+            type: "warning"
+          });
         }
-        const loading = this.$loading({
-          lock: true,
-          text: '登陆中...',
-          spinner: 'el-icon-loading',
-          background: 'rgba(0, 0, 0, 0.7)'
-        });
-        this.$axios.post(this.$api.LOGIN, JSON.stringify(this.userData)).then(res => {
-          if (res.code == 200) {
-            // 添加Token信息
-            this.$store.commit("setToken", res.token);
-            this.$router.push({
-              name: "Home",
-              params: {
-                // 表示是从登录页面过来的
-                login: true
-              }
-            });
+        // 移除 message 事件
+        window.removeEventListener("message", this.receiveMsg);
+      }
+    },
+    login(url) {
+      if (typeof url === "string") {
+        // 创建一个子窗口用于登录
+        let strWindowFeatures = "width=600,height=500,top=100,left=100,menubar=yes,location=yes,resizable=yes,scrollbars=true,status=true";
+        window.open(url, "_blank", strWindowFeatures);
+        // 创建postMessage监听
+        window.addEventListener("message", this.receiveMsg);
+      } else {
+        this.$refs["loginForm"].validate(valid => {
+          if (!valid) {
+            Message.error("登录信息不完整");
+            return;
           }
-          loading.close();
-        }).catch(err => {
-          // console.log(err)
-          loading.close();
+          const loading = this.$loading({
+            lock: true,
+            text: '登陆中...',
+            spinner: 'el-icon-loading',
+            background: 'rgba(0, 0, 0, 0.7)'
+          });
+          this.$axios.post(this.$api.LOGIN, JSON.stringify(this.userData)).then(res => {
+            if (res.code == 200) {
+              // 添加Token信息
+              this.$store.commit("setToken", res.token);
+              this.$router.push({
+                name: "Home",
+                params: {
+                  // 表示是从登录页面过来的
+                  login: true
+                }
+              });
+            }
+            loading.close();
+          }).catch(err => {
+            // console.log(err)
+            loading.close();
+          });
+          
         });
-        
-      });
+      }
     }
   },
   mounted() {

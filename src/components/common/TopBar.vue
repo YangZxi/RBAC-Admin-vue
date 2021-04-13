@@ -1,7 +1,7 @@
 <template>
   <div class="top-bar">
     <div class="logo">
-      <span class="isCollapse" @click="func"><i class="fa fa-outdent"></i></span>
+      <span class="isCollapse" @click="collapse"><i class="fa fa-outdent"></i></span>
       <el-breadcrumb separator-class="el-icon-arrow-right">
         <el-breadcrumb-item :to="{name: 'Home'}">首页</el-breadcrumb-item>
         <el-breadcrumb-item v-for="el in $store.state.menuModule.breadcrumb" :key="el">{{el}}</el-breadcrumb-item>
@@ -12,7 +12,8 @@
         ref="setting-btn-popover"
         placement="bottom"
         trigger="hover">
-        <el-button type="text" class='setting-popover-item' @click="$router.push({ name: 'Mine' })">修改资料</el-button>
+        <el-button style="margin-left: 10px;" type="text" class='setting-popover-item' @click="$router.push({ name: 'Mine' })">我的信息</el-button>
+        <el-button type="text" class='setting-popover-item' @click="$router.push({ name: 'Password' })">修改密码</el-button>
         <el-button type="text" class='setting-popover-item' @click="logout">退出</el-button>
       </el-popover>
       <el-button type="text" v-popover:setting-btn-popover>个人中心 <i class="el-icon-arrow-down"/></el-button>
@@ -32,6 +33,8 @@ export default {
           this.$store.commit("setUser", null);
           this.$store.state.menuModule.menu = [];
           this.$store.state.menuModule.tabs = [];
+          window.localStorage.clear();
+          window.sessionStorage.clear();
           this.$router.push({
             name: "Login"
           });
@@ -39,8 +42,7 @@ export default {
       })
       
     },
-    func() {
-      // $store.isCollapse = !$store.isCollapse
+    collapse() {
       this.$store.state.menuModule.isCollapse = !this.$store.state.menuModule.isCollapse;
     }
   }

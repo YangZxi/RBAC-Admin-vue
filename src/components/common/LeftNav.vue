@@ -8,7 +8,7 @@
     </el-menu-item>
     
     <!-- 遍历当前用户拥有的菜单 -->
-    <el-submenu v-for="(c, index) in menu" :key="c.name" :index="c.path">
+    <el-submenu v-for="(c, index) in menus" :key="c.name" :index="c.path">
       <template slot="title">
         <i :class="c.icon"></i>
         <span>{{c.name}}</span>
@@ -28,7 +28,7 @@ import { mapState, mapActions, mapGetters } from "vuex";
 export default {
   data() {
     return {
-      // isCollapse: false
+      
     }  
   },
   created() {
@@ -37,8 +37,7 @@ export default {
   },
   methods: {
     ...mapActions("menuModule", {
-      getMenu: "getMenu",
-      clickMenuItem: "clickMenuItem"
+      
     }),
     selectMenuItem(index) {
       this.$router.push({
@@ -48,14 +47,10 @@ export default {
   },
   computed: {
     ...mapState("menuModule", {
-      menu: "menu",
+      menus: "menus",
       activeItem: "activeItem",
       isCollapse: "isCollapse"
     }),
-    ...mapGetters("menuModule", {
-      subMenu: "subMenu",
-      itemMenu: "itemMenu",
-    })
   }
 };
 </script>

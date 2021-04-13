@@ -5,19 +5,19 @@
         <el-button type="primary" icon="el-icon-circle-plus-outline" size="small" @click="addHandler">新增</el-button>
         <el-button type="success" icon="el-icon-edit" size="small" @click="modifyHandler(undefined)" :disabled="isOperater != 1">修改</el-button>
         <el-button type="danger" icon="el-icon-delete" size="small" @click="removeHandler(undefined)" :disabled="isOperater == 0">删除</el-button>
-        <el-button type="warning" icon="el-icon-document-add" size="small" @click="exportHandler" :disabled="isOperater == 0">导出</el-button>
+        <el-button type="warning" icon="el-icon-document-add" size="small" @click="exportHandler($event)" :disabled="isOperater == 0">导出</el-button>
       </el-col>
       <el-col :span="3">
         <el-button type="" plain size="mini" icon="el-icon-refresh" @click="queryHandler()"></el-button>
-        <el-button type="" plain size="mini" icon="el-icon-full-screen"></el-button>
+        <el-button type="" plain size="mini" icon="el-icon-full-screen" @click="$tools.fullScreen($parent.$parent.$el)"></el-button>
       </el-col>
     </el-row>
     <el-row type="flex" justify="space-around" :gutter="20">
       <el-col >
         <el-card class="box-card" shadow="never">
-          <div slot="header" class="clearfix" body-style="{margin:0}">
+          <!-- <div slot="header" class="clearfix" body-style="{margin:0}">
             <span><b></b></span>
-          </div>
+          </div> -->
           
           <el-table :data="pageData.records" style="width: 100%" 
               @selection-change="selectionChange"
@@ -29,9 +29,8 @@
             <el-table-column type="selection" width="55"></el-table-column>
             <el-table-column label="用户名" prop="username" fixed="left">
               <template slot-scope="scope">
-                  <span>{{scope.row.username}}</span>
-                </template>
-              </el-table-column>
+                <span>{{scope.row.username}}</span>
+              </template>
             </el-table-column>
             <el-table-column label="昵称" prop="nickname" width="120"></el-table-column>
             <el-table-column label="邮箱" prop="email" width="150"></el-table-column>
@@ -44,7 +43,7 @@
                   @click.native="statusChange(scope.row)"
                   :active-value="1"
                   active-color="#13ce66"
-                  :inactive-value="scope.row.status > 1"
+                  :inactive-value="0"
                   inactive-color="#ff4949"
                 ></el-switch>
               </template>
@@ -72,14 +71,13 @@
     
     <!-- 弹出框——新增和修改信息 -->
     <el-dialog
-      :title="dialog.title + '角色'"
+      :title="dialog.title + '用户'"
       :visible.sync="dialog.visible"
       :close-on-click-modal="false"
       @open="queryRoles"
       @close="dialogClose"
       width="50%">
       
-      <!-- slot name="modelForm" ></slot> -->
       <el-form :model="modelForm" :rules="form.formRules" ref="modelForm" status-icon label-position="right" size="small" label-width="80px">
         <el-row type="flex" justify="space-between">
           <el-col :span="24" style="display: none;">
@@ -134,7 +132,7 @@
       
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialog.visible = false" size="medium">取 消</el-button>
-        <el-button @click="resetPassword" size="medium">重置密码</el-button>
+        <el-button v-if="dialog.title == '修改'" @click="resetPassword" size="medium">重置密码</el-button>
         <el-button type="primary" @click="submitHandler(0)" size="medium">{{dialog.submitText}}</el-button>
       </div>
     </el-dialog>
@@ -144,6 +142,10 @@
 <script>
 export default {
   name: "UserTable",
+  props: {
+    searchForm: Object,
+    API: String
+  },
   data() {
     var checkPath = (rule, value, callback) => {
       if (this.modelForm.type != 3 && !value) {
@@ -277,23 +279,20 @@ export default {
      * @param {Object} data
      */
     baseRequest(data) {
-      console.log(this.API)
       return this.method(this.API, data).then(res => {
-        console.log(res)
         if (res.code == 200) {
-          // this.modelForm = {type: 1, order: 3, status: 1}
           this.dialog.visible = false;
         }
         return res;
       }).catch(err => {
-        console.log(err, "1111")
         Promise.reject(err);
       });
     },
     // 刷新和获取表格数据
-    queryHandler() {
+    queryHandler(current) {
+      if (current) this.pageInfo.current = current;
       this.table.loading = true;
-      this.$axios.get(this.API, this.pageInfo).then(res => {
+      this.$axios.get(this.API, Object.assign({}, this.pageInfo, this.searchForm)).then(res => {
         // console.log(res)
         this.pageData = res.data ? res.data : {current: 1, total: 0, records: []};
         this.table.loading = false;
@@ -331,14 +330,12 @@ export default {
     },
     // 删除按钮
     removeHandler(rows = this.table.rows) {
-      this.$alert("本次操作一经确认将无法撤回，是否继续", "角色删除", {
+      this.$alert("本次操作一经确认将无法撤回，是否继续", "用户删除", {
         distinguishCancelAndClose: true,
         confirmButtonText: "删除",
         cancelButtonText: '取消'
       }).then(() => {
         this.method = this.$axios.delete;
-        console.log("删除了")
-        console.log(rows)
         if (Array.isArray(rows)) {
           this.baseRequest(rows.map(el => el.id)).then(res => this.queryHandler());
         } else {
@@ -347,6 +344,12 @@ export default {
       }).catch(action => {
         
       });
+    },
+    // 导出按钮
+    exportHandler(el) {
+      let columns = this.$refs["table"]["columns"].slice(1, this.$refs["table"]["columns"].length - 1);
+      columns = columns.map(el => ({"key": el.property, "value": el.label}) );
+      this.$tools.exportExcel(this.table.rows, columns, "用户列表");
     },
     resetPassword() {
       this.$axios.post(this.API, { id: this.modelForm.id, isReset: true }, false).then(res => {
@@ -357,10 +360,6 @@ export default {
           });
         }
       })
-    },
-    // 导出按钮
-    exportHandler() {
-      
     },
     /**
      * 表单提交 新增or更新
@@ -412,13 +411,12 @@ export default {
   watch: {
     pageInfo() {
       console.log("我变了")
+    },
+    pageData(nV, oV) {
+      if (this.pageInfo.current > nV.pages) {
+        this.pageInfo.current = 1;
+      }
     }
-  },
-  props: {
-    // pageData: Object,
-    // table: Object,
-    // modelForm: Object,
-    API: String
   },
 };
 </script>

@@ -4,7 +4,7 @@ import Vuex from 'vuex'
 Vue.use(Vuex)
 
 //创建VueX对象
-const store = new Vuex.Store({
+const Store = new Vuex.Store({
 	state: {
     token: window.localStorage.getItem("token") ? window.localStorage.getItem("token") : null,
 		user: null,
@@ -28,4 +28,4 @@ const store = new Vuex.Store({
 	}
 })
 
-export default store
+export default Store

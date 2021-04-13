@@ -6,24 +6,22 @@ import router from '@/router'
 Store.registerModule('menuModule', {
   namespaced: true,
   state: {
-    menu: [
-      
-    ],
-    tabs: [],
-    breadcrumb: [],
+    menus: [ ],
+    menusOriginal: { }, // id:menu
+    tabs: [ ],
+    breadcrumb: [ ],
     activeItem: '',
     isCollapse: false,
     getMenuFlag: false,
   },
   getters: {
     subMenu(state) {
-      var subs = state.menu.filter(f => f.sub).map(f => f.sub)
-      console.log(subs)
+      var subs = state.menus.filter(f => f.sub).map(f => f.sub)
       return Array.from(new Set(subs))
     },
     itemMenu(state) {
       return (sub, group) => {
-        var items = state.menu
+        var items = state.menus
           .filter(f => f.sub == sub && f.group == group && f.name)
           .map(f => {
             return {
@@ -36,11 +34,13 @@ Store.registerModule('menuModule', {
     }
   },
   mutations: {
-    initMenu(state, menu) {
-      // 拼接 router 路径，格式 => 父类别的 path + 当前选项的 path
-      menu.forEach(c => c.children.forEach(el => el.path = c.path + el.path));
-      console.log(menu);
-      state.menu = menu;
+    initMenus(state, menus) {
+      // 对二级菜单拼接 router 路径，格式 = 父类别的 path + 当前选项的 path
+      menus.forEach(c => c.children.forEach(el => el.path = c.path + el.path));
+      state.menus = menus;
+    },
+    setMenusOriginal(state, value) {
+      state.menusOriginal = value;
     },
     initTabs(state, tabs) {
       state.tabs = tabs;
@@ -52,19 +52,16 @@ Store.registerModule('menuModule', {
     },
     switchTab(state, nowIndex) {
       state.activeItem = nowIndex;
-      // router.push({ name: nowIndex });
-      // state.activeItem = "/system/menu";
       if (nowIndex != "Home") {
-        state.menu.forEach(c => c.children.forEach(el => {
-          if (el.component == nowIndex) {
-            state.breadcrumb = [c.name, el.name];
+        state.menus.forEach(parentM => parentM.children.forEach(sonM => {
+          if (sonM.component == nowIndex) {
+            state.breadcrumb = [parentM.name, sonM.name];
             return;
           }
         }));
       } else {
         state.breadcrumb = [];
       }
-      // console.log(state.breadcrumb)
     },
     breadcrumb(state, data) {
       state.breadcrumb = data;
@@ -72,60 +69,59 @@ Store.registerModule('menuModule', {
   },
   actions: {
     async getMenu(context) {
-      // MenuApi.getMenu().then(res => {
-      //     context.commit('initMenu', res);
-      // });
-      // console.log(USER_INFO)
       await axios.get(APIUtils.USER_INFO, {}, false).then(res => {
         Store.commit("setUser", res.data)
         console.log(Store.state.user)
-        const menu = context.state.menu.concat(res.data.menus);
-        context.commit("initMenu", res.data.menus)
+        context.commit("initMenus", res.data.menus);
+        context.commit("setMenusOriginal", res.data.menusOriginal);
       })
     },
-    async clickMenuItem(context, index, flag = true) {
-      if (!index || index == "NotFound") return;
-      // console.warn(index)
-      if (index != "Home") {
-        var tab = context.state.tabs.find(f => f.index == index)
-        console.error(context.state.tabs)
-        if (!tab) {
-          // let menu = context.state.menu.find(f => f.index == index)
-          let newTab = null;
-          context.state.menu.forEach((c) => {
-            // console.log(c)
-            c.children.forEach(el => {
-              // console.log(el)
-              if (el.component == index) {
-                newTab = {
-                  label: el.name,
-                  // index: el.path,
-                  path: el.path,
-                  index: el.component,
-                  closable: true,
-                  icon: el.icon,
-                  component: el.component,
-                }
-                // context.commit("breadcrumb", [c.name, el.name]);
-                return;
+    async clickMenuItem(context, route) {
+      let index = route.name;
+      if (route.name === "NotFound" || route.name === "Forbidden") return;
+      // 当标签栏中没有当前点击的标签时，执行下面的语句创建一个
+      if (index != "Home" && !context.state.tabs.find(f => f.index == index)) {
+        let newTab = null;
+        A:for (let m of context.state.menus) {
+          for (let el of m.children) {
+            if (el.component == index) {
+              newTab = {
+                label: el.name,
+                path: el.path,
+                index: el.component,
+                closable: true,
+                icon: el.icon
               }
-            });
-          });
-          console.log(newTab)
-          // 这里加入了 “@/” 所以后面的地址开头无需左斜线
-          // let component = import(`@/views${menu.index ? menu.index + "/" + menu.component : 'components/NotFound'}`)
-          // try {
-          //   newTab.componentPath = "views" + newTab.path + '/' + newTab.component;
-          //   let component = import("@/" + newTab.componentPath)
-          // } catch(err) {
-          //   router.push({
-          //     name: "NotFound"
-          //   });
-          // }
-
-          context.commit('addTab', newTab)
+              break A;
+            }
+          }
         }
+        
+        // 当在后台传来的菜单中找不到对应的路径，就可能为无需后台提供的标签，则通过index中的meta标签创建
+        if (!newTab) {
+          newTab = {
+            label: route.meta.tabName,
+            path: route.path,
+            index: route.name,
+            closable: true,
+            icon: "el-icon-s-help"
+          }
+        }
+        // console.log(newTab)
+        // 这里加入了 “@/” 所以后面的地址开头无需左斜线
+        // let component = import(`@/views${menu.index ? menu.index + "/" + menu.component : 'components/NotFound'}`)
+        // try {
+        //   newTab.componentPath = "views" + newTab.path + '/' + newTab.component;
+        //   let component = import("@/" + newTab.componentPath)
+        // } catch(err) {
+        //   router.push({
+        //     name: "NotFound"
+        //   });
+        // }
+        // 添加标签到vuex
+        context.commit('addTab', newTab)
       }
+      // 通过index选择新创建的标签或已存在标签
       context.commit('switchTab', index);
     },
     closeTab(context, index) {

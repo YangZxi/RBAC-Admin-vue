@@ -27,7 +27,6 @@
         console.log(`每页 ${val} 条`);
         // this.pageInfo.size = val;
         // console.log(this.$parent.$parent.$parent.$parent.pageInfo)
-        console.log()
         this.pageInfo.size = val
         this.$emit("queryHandler");
         // this.getHandler();

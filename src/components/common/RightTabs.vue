@@ -14,12 +14,6 @@
       </span>
       <!-- <async-component :componentPath="item.componentPath" class="async-component"></async-component> -->
     </el-tab-pane>
-    <!-- <transition-group mode="out-in">
-      <keep-alive v-if="$route.meta.keepAlive" :key="$route.name">
-        <router-view v-if="$route.meta.keepAlive" :key="$route.name"></router-view>
-      </keep-alive>
-      <router-view v-else :key="$route.name"></router-view>
-    </transition-group> -->
     <transition mode="out-in">
       <keep-alive>
         <router-view v-if="$route.meta.keepAlive"></router-view>
@@ -33,8 +27,6 @@
 
 <script>
 import { mapActions, mapState, mapMutations } from "vuex";
-import AdminHome from "@/views/Home";
-import AsyncComponent from "../AsyncComponent";
 
 export default {
   computed: {
@@ -58,16 +50,12 @@ export default {
       });
     },
     drag() {
-      alert(1)
+      
     }
   },
   mounted() {
     console.log(this.tabs)
   },
-  components: {
-    AdminHome,
-    AsyncComponent
-  }
 };
 </script>
 <style scoped>
